@@ -3,8 +3,9 @@ const express = require('express');
 const router = express.Router();
 
 // Import model(s)
-const { Classroom } = require('../db/models');
+const { Classroom, Supply, Student } = require('../db/models');
 const { Op } = require('sequelize');
+
 
 // List of classrooms
 router.get('/', async (req, res, next) => {
@@ -35,9 +36,12 @@ router.get('/', async (req, res, next) => {
                     errorResult.errors
     */
     const where = {};
-
+    // let { name } = req.query
     // Your code here
+    if (req.query.name){
+        where.name = {[Op.substring] : req.query.name}
 
+    }
     const classrooms = await Classroom.findAll({
         attributes: [ 'id', 'name', 'studentLimit' ],
         where,
@@ -76,6 +80,30 @@ router.get('/:id', async (req, res, next) => {
             // classroom
         // Optional Phase 5D: Calculate the average grade of the classroom
     // Your code here
+    // console.log(classroom)
+    let supplies = await Classroom.count({
+        include: [{model: Supply}],
+        where: {
+            id: req.params.id
+        }
+
+    });
+    classroom = classroom.toJSON();
+    classroom.supplyCount = supplies
+
+    let students = await Classroom.count({
+        include: [{model: Student}],
+        where: {
+            id: req.params.id
+        }
+    })
+    classroom.studentCount = students;
+
+    if (classroom.studentCount > classroom.studentLimit){
+        classroom.overload = true
+    } else {
+        classroom.overload = false
+    }
 
     res.json(classroom);
 });
